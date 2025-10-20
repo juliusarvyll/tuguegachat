@@ -32,7 +32,7 @@ export function UsernamePrompt({ onSubmit }: UsernamePromptProps) {
           <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-full w-fit">
             <MessageSquare className="size-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Welcome to Anonymous Chat</CardTitle>
+          <CardTitle className="text-2xl">Welcome to TuguegaChat</CardTitle>
           <CardDescription>
             Choose a username and school to start chatting with random strangers
           </CardDescription>

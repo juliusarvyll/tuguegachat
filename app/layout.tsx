@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TuguegaChat - Anonymous Chat",
+  title: "TuguegaChat",
   description: "Connect with random strangers for anonymous conversations",
 };
 
