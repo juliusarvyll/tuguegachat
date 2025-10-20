@@ -3,11 +3,13 @@
 import { UsernamePrompt } from '@/components/username-prompt'
 import { getAnonymousUser, setAnonymousUser } from '@/lib/anonymous-user'
 import { findMatch } from '@/lib/use-matching'
+import { getSchoolById } from '@/lib/schools'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, MessageSquare, Users, Sparkles, GraduationCap } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function WaitingRoom() {
   const router = useRouter()
@@ -100,12 +102,30 @@ export default function WaitingRoom() {
 
                   {user.school && (
                     <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                      <div className="p-2 bg-background rounded-full">
-                        <GraduationCap className="size-4" />
+                      <div className="p-2 bg-background rounded-full flex items-center justify-center">
+                        {(() => {
+                          const school = getSchoolById(user.school)
+                          return school ? (
+                            <Image
+                              src={school.logo}
+                              alt={school.name}
+                              width={16}
+                              height={16}
+                              className="size-4 object-contain"
+                            />
+                          ) : (
+                            <GraduationCap className="size-4" />
+                          )
+                        })()}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Your school</p>
-                        <p className="text-xs text-muted-foreground">{user.school}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            const school = getSchoolById(user.school)
+                            return school ? school.name : user.school
+                          })()}
+                        </p>
                       </div>
                     </div>
                   )}

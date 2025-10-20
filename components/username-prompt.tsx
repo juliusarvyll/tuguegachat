@@ -5,8 +5,9 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { MessageSquare, Sparkles, GraduationCap } from 'lucide-react'
+import { MessageSquare, Sparkles, GraduationCap, Users } from 'lucide-react'
 import { SCHOOLS, getSchoolById } from '@/lib/schools'
+import { useActiveUsers } from '@/hooks/use-active-users'
 
 interface UsernamePromptProps {
   onSubmit: (username: string, school: string) => void
@@ -15,6 +16,7 @@ interface UsernamePromptProps {
 export function UsernamePrompt({ onSubmit }: UsernamePromptProps) {
   const [username, setUsername] = useState('')
   const [school, setSchool] = useState('')
+  const { activeUserCount, isConnected } = useActiveUsers()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,6 +36,30 @@ export function UsernamePrompt({ onSubmit }: UsernamePromptProps) {
           <CardDescription>
             Choose a username and school to start chatting with random strangers
           </CardDescription>
+          
+          {/* Active Users Counter */}
+          <div className="mt-4 flex items-center justify-center gap-2 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Users className="size-4 text-primary" />
+                {isConnected && (
+                  <div className="absolute -top-1 -right-1 size-2 bg-green-500 rounded-full animate-pulse" />
+                )}
+              </div>
+              <span className="text-sm font-medium">
+                {isConnected ? (
+                  <>
+                    <span className="text-primary font-semibold">{activeUserCount}</span>
+                    <span className="text-muted-foreground ml-1">
+                      {activeUserCount === 1 ? 'user online' : 'users online'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">Connecting...</span>
+                )}
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

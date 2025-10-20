@@ -126,9 +126,15 @@ export default function Chat() {
             </h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {otherUser ? (
-                <span>Connected</span>
+                <div className="flex items-center gap-1">
+                  <div className="size-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>Connected</span>
+                </div>
               ) : (
-                <span>Waiting for other user...</span>
+                <div className="flex items-center gap-1">
+                  <div className="size-2 bg-yellow-500 rounded-full animate-pulse" />
+                  <span>Waiting for other user...</span>
+                </div>
               )}
             </div>
           </div>
@@ -159,17 +165,41 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Chat */}
+      {/* Chat or Waiting State */}
       <div className="flex-1 overflow-hidden">
-        <RealtimeChat
-          roomName={roomName}
-          userId={userId}
-          username={user.username}
-          schoolId={user.school}
-          onOtherUserChange={setOtherUser}
-          onLeaveNotificationReady={(fn) => { sendLeaveNotificationRef.current = fn }}
-          onRoomFull={handleRoomFull}
-        />
+        {otherUser ? (
+          <RealtimeChat
+            roomName={roomName}
+            userId={userId}
+            username={user.username}
+            schoolId={user.school}
+            onOtherUserChange={setOtherUser}
+            onLeaveNotificationReady={(fn) => { sendLeaveNotificationRef.current = fn }}
+            onRoomFull={handleRoomFull}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center space-y-4 p-8">
+              <div className="relative">
+                <Loader2 className="size-12 text-primary animate-spin mx-auto" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <MessageSquare className="size-5 text-primary" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Waiting for other user...</h3>
+                <p className="text-sm text-muted-foreground">
+                  Once they join, you'll be able to start chatting!
+                </p>
+              </div>
+              <div className="flex items-center gap-2 justify-center">
+                <div className="size-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <div className="size-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <div className="size-2 bg-primary rounded-full animate-bounce" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
