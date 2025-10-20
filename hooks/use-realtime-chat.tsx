@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 
 interface UseRealtimeChatProps {
   roomName: string
@@ -30,7 +30,9 @@ export interface OtherUser {
 }
 
 export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeChatProps) {
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
+  
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [channel, setChannel] = useState<ReturnType<typeof supabase.channel> | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -38,7 +40,7 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
 
   useEffect(() => {
-    if (!roomName) return
+    if (!roomName || !username) return
 
     const newChannel = supabase.channel(roomName, {
       config: {
@@ -48,46 +50,37 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
       },
     })
 
+    // Helper to update other user from presence state
+    const updateOtherUser = () => {
+      const state = newChannel.presenceState()
+      const allUsers = Object.keys(state)
+      
+      // Find other users (excluding current user)
+      const otherUsers = allUsers.filter((key) => key !== username)
+      
+      if (otherUsers.length > 0) {
+        const key = otherUsers[0]
+        const presences = state[key]
+        const presence = Array.isArray(presences) ? presences[0] : presences
+        
+        setOtherUser({
+          username: (presence as any)?.username || key,
+          schoolId: (presence as any)?.schoolId
+        })
+      } else {
+        setOtherUser(null)
+      }
+      
+      setOnlineUsers(new Set(allUsers))
+    }
+
     newChannel
       .on('broadcast', { event: EVENT_MESSAGE_TYPE }, (payload) => {
         setMessages((current) => [...current, payload.payload as ChatMessage])
       })
-      .on('presence', { event: 'sync' }, () => {
-        const state = newChannel.presenceState()
-        const allUsers = Object.keys(state)
-        const users = allUsers
-          .filter((key) => key !== username)
-          .map((key) => {
-            const presences = state[key]
-            const presence = Array.isArray(presences) ? presences[0] : presences
-            return {
-              username: (presence as any)?.username || key,
-              schoolId: (presence as any)?.schoolId
-            }
-          })
-        
-        if (users.length > 0) {
-          setOtherUser(users[0])
-        } else if (allUsers.length === 1) {
-          // Only current user is present
-          setOtherUser(null)
-        }
-        setOnlineUsers(new Set(allUsers))
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (key !== username) {
-          const presence = Array.isArray(newPresences) ? newPresences[0] : newPresences
-          setOtherUser({
-            username: (presence as any)?.username || key,
-            schoolId: (presence as any)?.schoolId
-          })
-        }
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        if (key !== username) {
-          setOtherUser(null)
-        }
-      })
+      .on('presence', { event: 'sync' }, updateOtherUser)
+      .on('presence', { event: 'join' }, updateOtherUser)
+      .on('presence', { event: 'leave' }, updateOtherUser)
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
@@ -96,11 +89,7 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
             schoolId,
             online_at: new Date().toISOString()
           })
-        } else if (status === 'CHANNEL_ERROR') {
-          setIsConnected(false)
-        } else if (status === 'TIMED_OUT') {
-          setIsConnected(false)
-        } else if (status === 'CLOSED') {
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           setIsConnected(false)
         }
       })
