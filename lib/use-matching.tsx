@@ -14,7 +14,10 @@ export async function findMatch(username: string): Promise<string | null> {
   const supabase = createClient()
   const currentUser = getAnonymousUser()
 
+  console.log('findMatch called for:', username, 'with user:', currentUser)
+
   if (!currentUser) {
+    console.error('No current user found')
     return null
   }
 
@@ -40,6 +43,7 @@ export async function findMatch(username: string): Promise<string | null> {
         if (matched) return
 
         const state = channel.presenceState()
+        console.log('Presence sync - current state:', state)
         const waitingUsers = Object.keys(state)
           .filter((user) => user !== username)
           .map((user) => {
@@ -75,10 +79,12 @@ export async function findMatch(username: string): Promise<string | null> {
 
         if (bestMatch) {
           // Found someone! Match with the best available user
+          console.log('Match found with:', bestMatch.username)
           matched = true
           clearTimeout(timeout)
 
           const roomId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          console.log('Created room:', roomId)
 
           // Broadcast match to both users
           channel.send({
@@ -109,7 +115,9 @@ export async function findMatch(username: string): Promise<string | null> {
         }
       })
       .subscribe(async (status) => {
+        console.log('Channel subscription status:', status)
         if (status === 'SUBSCRIBED') {
+          console.log('Tracking presence for:', username)
           await channel.track({
             username,
             school: currentUser.school,

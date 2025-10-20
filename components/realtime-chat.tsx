@@ -19,6 +19,7 @@ interface RealtimeChatProps {
   onOnlineUsersChange?: (users: Set<string>) => void
   onOtherUserChange?: (user: OtherUser | null) => void
   onLeaveNotificationReady?: (sendLeave: () => Promise<void>) => void
+  onRoomFull?: () => void
   messages?: ChatMessage[]
 }
 
@@ -38,6 +39,7 @@ export const RealtimeChat = ({
   onOnlineUsersChange,
   onOtherUserChange,
   onLeaveNotificationReady,
+  onRoomFull,
   messages: initialMessages = [],
 }: RealtimeChatProps) => {
   const { containerRef, scrollToBottom } = useChatScroll()
@@ -53,6 +55,7 @@ export const RealtimeChat = ({
     roomName,
     username,
     schoolId,
+    onRoomFull,
   })
   const [newMessage, setNewMessage] = useState('')
 

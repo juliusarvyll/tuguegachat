@@ -53,6 +53,12 @@ export default function Chat() {
     router.push('/')
   }
 
+  const handleRoomFull = () => {
+    console.error('Room is full, redirecting to home')
+    localStorage.removeItem('current_room')
+    router.push('/')
+  }
+
   // Track when other user leaves
   useEffect(() => {
     if (previousOtherUser && !otherUser) {
@@ -159,6 +165,7 @@ export default function Chat() {
           schoolId={user.school}
           onOtherUserChange={setOtherUser}
           onLeaveNotificationReady={(fn) => { sendLeaveNotificationRef.current = fn }}
+          onRoomFull={handleRoomFull}
         />
       </div>
     </div>

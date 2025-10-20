@@ -27,8 +27,11 @@ export default function ChatPage() {
     const storedRoomId = localStorage.getItem('current_room')
     const user = getAnonymousUser()
 
+    console.log('Chat page loaded - Room:', storedRoomId, 'User:', user)
+
     if (!storedRoomId || !user) {
       // No room or user found, redirect to home
+      console.log('No room or user, redirecting to home')
       router.push('/')
       return
     }
@@ -40,6 +43,12 @@ export default function ChatPage() {
   }, [router])
 
   const handleLeaveChat = () => {
+    localStorage.removeItem('current_room')
+    router.push('/')
+  }
+
+  const handleRoomFull = () => {
+    console.error('Room is full, redirecting to home')
     localStorage.removeItem('current_room')
     router.push('/')
   }
@@ -57,6 +66,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (previousOtherUser && !otherUser) {
       // Other user left
+      console.log('Other user left, showing notification')
       setUserLeft(true)
       setCountdown(5)
 
@@ -169,6 +179,7 @@ export default function ChatPage() {
           schoolId={schoolId}
           onOtherUserChange={setOtherUser}
           onLeaveNotificationReady={(fn) => { sendLeaveNotificationRef.current = fn }}
+          onRoomFull={handleRoomFull}
         />
       </div>
     </div>

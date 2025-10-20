@@ -32,17 +32,22 @@ export default function WaitingRoom() {
     setSearchAttempt((prev) => prev + 1)
 
     try {
+      console.log('Starting match search for:', user.username)
       const roomId = await findMatch(user.username)
+      console.log('Match result:', roomId)
       
       if (roomId) {
         // Match found! Store room ID in localStorage and navigate to chat
+        console.log('Match found! Navigating to chat with room:', roomId)
         localStorage.setItem('current_room', roomId)
         router.push('/chat')
       } else {
         // No match found within timeout
+        console.log('No match found within timeout')
         setIsSearching(false)
       }
     } catch (error) {
+      console.error('Error during matching:', error)
       setIsSearching(false)
     }
   }
