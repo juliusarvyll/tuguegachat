@@ -54,7 +54,8 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
       })
       .on('presence', { event: 'sync' }, () => {
         const state = newChannel.presenceState()
-        const users = Object.keys(state)
+        const allUsers = Object.keys(state)
+        const users = allUsers
           .filter((key) => key !== username)
           .map((key) => {
             const presences = state[key]
@@ -67,11 +68,20 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
         
         if (users.length > 0) {
           setOtherUser(users[0])
+        } else if (allUsers.length === 1) {
+          // Only current user is present
+          setOtherUser(null)
         }
-        setOnlineUsers(new Set(Object.keys(state)))
+        setOnlineUsers(new Set(allUsers))
       })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        // User joined
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        if (key !== username) {
+          const presence = Array.isArray(newPresences) ? newPresences[0] : newPresences
+          setOtherUser({
+            username: (presence as any)?.username || key,
+            schoolId: (presence as any)?.schoolId
+          })
+        }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         if (key !== username) {
@@ -100,7 +110,7 @@ export function useRealtimeChat({ roomName, username, schoolId }: UseRealtimeCha
     return () => {
       supabase.removeChannel(newChannel)
     }
-  }, [roomName, supabase])
+  }, [roomName, username, schoolId, supabase])
 
   const sendMessage = useCallback(
     async (content: string) => {

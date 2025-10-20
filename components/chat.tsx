@@ -113,7 +113,7 @@ export default function Chat() {
               {otherUser ? (
                 <span>Chatting with {otherUser.username}</span>
               ) : (
-                <span>Anonymous Chat</span>
+                <span>TuguegaChat</span>
               )}
             </h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">

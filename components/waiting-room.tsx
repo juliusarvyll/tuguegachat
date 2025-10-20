@@ -62,7 +62,7 @@ export default function WaitingRoom() {
             <div className="mx-auto mb-4 p-4 bg-primary/10 rounded-full w-fit">
               <MessageSquare className="size-12 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Anonymous Chat</CardTitle>
+            <CardTitle className="text-2xl">TuguegaChat</CardTitle>
             <CardDescription>
               Connect with random strangers for anonymous conversations
             </CardDescription>

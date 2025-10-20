@@ -90,8 +90,11 @@ export async function findMatch(username: string): Promise<string | null> {
             },
           })
 
-          supabase.removeChannel(channel)
-          resolve(roomId)
+          // Small delay to ensure broadcast is received before removing channel
+          setTimeout(() => {
+            supabase.removeChannel(channel)
+            resolve(roomId)
+          }, 500)
         }
       })
       .on('broadcast', { event: 'match-found' }, (payload) => {
