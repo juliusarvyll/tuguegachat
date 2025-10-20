@@ -1,133 +1,166 @@
-fimport { RealtimeChat } from '@/components/realtime-chat'
+'use client'
+
+import { RealtimeChat } from '@/components/realtime-chat'
 import { UsernamePrompt } from '@/components/username-prompt'
 import { getAnonymousUser, setAnonymousUser } from '@/lib/anonymous-user'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Users, SkipForward, MessageSquare } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowLeft, SkipForward, MessageSquare, Loader2 } from 'lucide-react'
+import { type OtherUser } from '@/hooks/use-realtime-chat'
 
 export default function Chat() {
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [roomName, setRoomName] = useState<string | null>(null)
-  const [onlineCount, setOnlineCount] = useState(0)
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
-  const [selectedUser, setSelectedUser] = useState<string | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
+  const [previousOtherUser, setPreviousOtherUser] = useState<OtherUser | null>(null)
+  const [userLeft, setUserLeft] = useState(false)
+  const [countdown, setCountdown] = useState(5)
+  const sendLeaveNotificationRef = useRef<(() => Promise<void>) | null>(null)
   
   useEffect(() => {
-    setUser(getAnonymousUser())
-    // Get room ID from localStorage
+    const currentUser = getAnonymousUser()
     const storedRoom = localStorage.getItem('current_room')
-    if (!storedRoom) {
-      // No room ID, redirect to home
-      router.visit('/')
+    
+    if (!storedRoom || !currentUser) {
+      router.push('/')
       return
     }
+    
+    setUser(currentUser)
     setRoomName(storedRoom)
-  }, [])
-  
-  // Check if this is a private message room
-  const isPrivateMessage = roomName?.startsWith('dm-') || false
-  const otherUsername = isPrivateMessage && user?.username && roomName
-    ? roomName.replace('dm-', '').split('-').find((u) => u !== user.username)
-    : null
+    setIsLoading(false)
+  }, [router])
 
-  const handleUsernameSubmit = (username: string, school: string, preferredSchool: string) => {
-    const newUser = { username, school, preferredSchool }
+  const handleUsernameSubmit = (username: string, school: string) => {
+    const newUser = { username, school }
     setAnonymousUser(newUser)
     setUser(newUser)
   }
 
-  if (!user) {
-    return (
-      <AppLayout>
-        <Head title="Chat" />
-        <UsernamePrompt onSubmit={handleUsernameSubmit} />
-      </AppLayout>
-    )
-  }
-
-  if (!roomName) {
-    return (
-      <AppLayout>
-        <Head title="Chat" />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      </AppLayout>
-    )
-  }
-
-  // No database persistence - messages only exist in real-time
-
-  const handleOnlineUsersChange = (users: Set<string>) => {
-    setOnlineCount(users.size)
-    setOnlineUsers(users)
-  }
-
-  const handleUserClick = (clickedUser: string) => {
-    if (!user) return
-    // Create a private room name by sorting usernames alphabetically
-    const roomUsers = [user.username, clickedUser].sort()
-    const privateRoomName = `dm-${roomUsers.join('-')}`
-    router.visit(`/chat/${privateRoomName}`)
-  }
-
-  const handleNext = () => {
-    toast.info('Finding a new person...')
-    // Clear room from localStorage and go back to waiting room
+  const handleNext = async () => {
+    if (sendLeaveNotificationRef.current) {
+      await sendLeaveNotificationRef.current()
+    }
     localStorage.removeItem('current_room')
-    router.visit('/', {
-      method: 'get',
-      preserveState: false,
-    })
+    router.push('/')
   }
 
   const handleLeave = () => {
-    // Clear room from localStorage and go back to waiting room
     localStorage.removeItem('current_room')
-    router.visit('/', {
-      method: 'get',
-      preserveState: false,
-    })
+    router.push('/')
+  }
+
+  // Track when other user leaves
+  useEffect(() => {
+    if (previousOtherUser && !otherUser) {
+      setUserLeft(true)
+      setCountdown(5)
+
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval)
+            handleNext()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      return () => clearInterval(countdownInterval)
+    }
+
+    if (otherUser) {
+      setPreviousOtherUser(otherUser)
+      setUserLeft(false)
+    }
+  }, [otherUser, previousOtherUser])
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <UsernamePrompt onSubmit={handleUsernameSubmit} />
+      </div>
+    )
+  }
+
+  if (isLoading || !roomName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
-    <AppLayout>
-      <Head title={`Chat - ${roomName}`} />
-      <div className="h-screen flex flex-col">
-        <div className="border-b border-border px-4 py-3 flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <MessageSquare className="size-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-base">Anonymous Chat</h2>
-              <p className="text-xs text-muted-foreground">
-                {onlineCount > 1 ? `${onlineCount} people in chat` : 'Waiting for others...'}
-              </p>
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <div className="border-b border-border p-4 flex items-center justify-between bg-background">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLeave}
+            className="rounded-full"
+          >
+            <ArrowLeft className="size-5" />
+          </Button>
+          <div>
+            <h1 className="font-semibold">
+              {otherUser ? (
+                <span>Chatting with {otherUser.username}</span>
+              ) : (
+                <span>Anonymous Chat</span>
+              )}
+            </h1>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {otherUser ? (
+                <span>Connected</span>
+              ) : (
+                <span>Waiting for other user...</span>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleNext}>
-              <SkipForward className="size-4 mr-2" />
-              Next
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLeave}>
-              <ArrowLeft className="size-4 mr-2" />
-              Leave
-            </Button>
-          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <RealtimeChat
-            roomName={roomName}
-            username={user.username}
-            onOnlineUsersChange={handleOnlineUsersChange}
-          />
-        </div>
+        <Button
+          variant="outline"
+          onClick={handleNext}
+          className="gap-2"
+        >
+          <SkipForward className="size-4" />
+          Next
+        </Button>
       </div>
-    </AppLayout>
+
+      {/* User Left Notification */}
+      {userLeft && (
+        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg p-8 max-w-md text-center space-y-4 shadow-lg">
+            <div className="text-4xl">👋</div>
+            <h2 className="text-xl font-semibold">User has left the chat</h2>
+            <p className="text-muted-foreground">
+              Finding you a new person to chat with in {countdown} seconds...
+            </p>
+            <Button onClick={handleNext} className="w-full">
+              Find Next Person Now
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Chat */}
+      <div className="flex-1 overflow-hidden">
+        <RealtimeChat
+          roomName={roomName}
+          username={user.username}
+          schoolId={user.school}
+          onOtherUserChange={setOtherUser}
+          onLeaveNotificationReady={(fn) => { sendLeaveNotificationRef.current = fn }}
+        />
+      </div>
+    </div>
   )
 }
