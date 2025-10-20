@@ -1,4 +1,5 @@
 export interface AnonymousUser {
+  id: string
   username: string
   school: string
 }
@@ -11,9 +12,19 @@ export function getAnonymousUser(): AnonymousUser | null {
   return data ? JSON.parse(data) : null
 }
 
-export function setAnonymousUser(user: AnonymousUser): void {
+export function setAnonymousUser(user: Omit<AnonymousUser, 'id'> | AnonymousUser): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
+  
+  // Check if user already exists to preserve ID
+  const existingUser = getAnonymousUser()
+  
+  // Generate ID if not provided and no existing user
+  const userWithId: AnonymousUser = 'id' in user ? user : {
+    ...user,
+    id: existingUser?.id || crypto.randomUUID()
+  }
+  
+  localStorage.setItem(USER_KEY, JSON.stringify(userWithId))
 }
 
 export function clearAnonymousUser(): void {

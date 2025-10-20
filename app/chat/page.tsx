@@ -13,6 +13,7 @@ import Image from 'next/image'
 export default function ChatPage() {
   const router = useRouter()
   const [roomId, setRoomId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string>('')
   const [username, setUsername] = useState<string>('')
   const [schoolId, setSchoolId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
@@ -37,6 +38,7 @@ export default function ChatPage() {
     }
 
     setRoomId(storedRoomId)
+    setUserId(user.id)
     setUsername(user.username)
     setSchoolId(user.school)
     setIsLoading(false)
@@ -174,7 +176,8 @@ export default function ChatPage() {
       {/* Chat */}
       <div className="flex-1 overflow-hidden">
         <RealtimeChat 
-          roomName={roomId} 
+          roomName={roomId}
+          userId={userId}
           username={username}
           schoolId={schoolId}
           onOtherUserChange={setOtherUser}

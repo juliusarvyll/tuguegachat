@@ -28,12 +28,24 @@ export default function WaitingRoom() {
   const handleStartChat = async () => {
     if (!user) return
 
+    // Ensure user has an ID before matching
+    let userWithId = user
+    if (!user.id) {
+      console.log('User missing ID, getting from storage...')
+      userWithId = getAnonymousUser()
+      if (!userWithId?.id) {
+        console.error('No user ID available, cannot start matching')
+        return
+      }
+      setUser(userWithId)
+    }
+
     setIsSearching(true)
     setSearchAttempt((prev) => prev + 1)
 
     try {
-      console.log('Starting match search for:', user.username)
-      const roomId = await findMatch(user.username)
+      console.log('Starting match search for:', userWithId.username, 'ID:', userWithId.id)
+      const roomId = await findMatch(userWithId.id)
       console.log('Match result:', roomId)
       
       if (roomId) {

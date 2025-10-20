@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 
 interface RealtimeChatProps {
   roomName: string
+  userId: string
   username: string
   schoolId?: string
   onMessage?: (messages: ChatMessage[]) => void
@@ -33,6 +34,7 @@ interface RealtimeChatProps {
  */
 export const RealtimeChat = ({
   roomName,
+  userId,
   username,
   schoolId,
   onMessage,
@@ -53,6 +55,7 @@ export const RealtimeChat = ({
     otherUser,
   } = useRealtimeChat({
     roomName,
+    userId,
     username,
     schoolId,
     onRoomFull,

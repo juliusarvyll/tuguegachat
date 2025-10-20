@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 
 interface UseRealtimeChatProps {
   roomName: string
+  userId: string
   username: string
   schoolId?: string
   onRoomFull?: () => void
@@ -30,20 +31,23 @@ export interface OtherUser {
   schoolId?: string
 }
 
-export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: UseRealtimeChatProps) {
+export function useRealtimeChat({ roomName, userId, username, schoolId, onRoomFull }: UseRealtimeChatProps) {
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
   const isSubscribingRef = useRef(false)
+  const retryCountRef = useRef(0)
+  const maxRetries = 3
   
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [channel, setChannel] = useState<ReturnType<typeof supabase.channel> | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
+  const [retryTrigger, setRetryTrigger] = useState(0)
 
   useEffect(() => {
-    if (!roomName || !username) {
-      console.log('Missing roomName or username:', { roomName, username })
+    if (!roomName || !username || !userId) {
+      console.log('Missing required data:', { roomName, username, userId })
       return
     }
 
@@ -53,12 +57,12 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
     }
 
     isSubscribingRef.current = true
-    console.log('Creating channel for room:', roomName, 'user:', username)
+    console.log('Creating channel for room:', roomName, 'user:', username, 'userId:', userId)
 
     const newChannel = supabase.channel(roomName, {
       config: {
         presence: {
-          key: username,
+          key: userId,
         },
       },
     })
@@ -68,6 +72,9 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
       const state = newChannel.presenceState()
       const allUsers = Object.keys(state)
       console.log('Presence state updated. All users:', allUsers)
+      console.log('My user ID:', userId)
+      console.log('Room name:', roomName)
+      console.log('Full presence state:', state)
       
       // Check if room is full (more than 2 users)
       if (allUsers.length > 2) {
@@ -78,8 +85,8 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
         return
       }
       
-      // Find other users (excluding current user)
-      const otherUsers = allUsers.filter((key) => key !== username)
+      // Find other users (excluding current user by ID)
+      const otherUsers = allUsers.filter((key) => key !== userId)
       console.log('Other users (excluding me):', otherUsers)
       
       if (otherUsers.length > 0) {
@@ -119,8 +126,10 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
         updateOtherUser()
       })
       .subscribe(async (status) => {
-        console.log('Chat channel subscription status:', status)
+        console.log('Chat channel subscription status:', status, 'Retry count:', retryCountRef.current)
+        
         if (status === 'SUBSCRIBED') {
+          retryCountRef.current = 0 // Reset retry count on success
           setIsConnected(true)
           console.log('Tracking presence in chat room:', { username, schoolId })
           try {
@@ -136,6 +145,24 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('Channel error/timeout:', status)
           setIsConnected(false)
+          
+          // Retry connection if under max retries
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++
+            console.log(`Retrying connection (${retryCountRef.current}/${maxRetries})...`)
+            
+            // Clean up failed channel
+            supabase.removeChannel(newChannel)
+            isSubscribingRef.current = false
+            
+            // Retry after a delay
+            setTimeout(() => {
+              console.log('Triggering retry by updating retryTrigger')
+              setRetryTrigger(prev => prev + 1)
+            }, 2000 * retryCountRef.current) // Exponential backoff
+          } else {
+            console.error('Max retries reached. Connection failed.')
+          }
         } else if (status === 'CLOSED') {
           console.log('Channel closed (this is normal on cleanup)')
           setIsConnected(false)
@@ -147,10 +174,13 @@ export function useRealtimeChat({ roomName, username, schoolId, onRoomFull }: Us
     return () => {
       console.log('Cleaning up channel:', roomName)
       isSubscribingRef.current = false
-      supabase.removeChannel(newChannel)
+      retryCountRef.current = 0
+      if (newChannel) {
+        supabase.removeChannel(newChannel)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomName, username, schoolId])
+  }, [roomName, username, userId, schoolId, retryTrigger])
 
   const sendMessage = useCallback(
     async (content: string) => {

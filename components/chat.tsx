@@ -13,6 +13,7 @@ export default function Chat() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [roomName, setRoomName] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
   const [previousOtherUser, setPreviousOtherUser] = useState<OtherUser | null>(null)
@@ -30,6 +31,7 @@ export default function Chat() {
     }
     
     setUser(currentUser)
+    setUserId(currentUser.id)
     setRoomName(storedRoom)
     setIsLoading(false)
   }, [router])
@@ -161,6 +163,7 @@ export default function Chat() {
       <div className="flex-1 overflow-hidden">
         <RealtimeChat
           roomName={roomName}
+          userId={userId}
           username={user.username}
           schoolId={user.school}
           onOtherUserChange={setOtherUser}

@@ -6,9 +6,17 @@ export function createClient() {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      'Missing Supabase environment variables. Please check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY are set in your .env.local file.'
+      'Missing Supabase environment variables. Please check that NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.development.local file.'
     )
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  console.log('Creating Supabase client with URL:', supabaseUrl)
+
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  })
 }
