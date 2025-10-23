@@ -11,11 +11,14 @@ import { Input } from '@/components/ui/input'
 import { Send } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 
+type ChatType = '1on1' | 'group' | 'solo'
+
 interface RealtimeChatProps {
   roomName: string
   userId: string
   username: string
   schoolId?: string
+  chatType?: ChatType
   onMessage?: (messages: ChatMessage[]) => void
   onOnlineUsersChange?: (users: Set<string>) => void
   onOtherUserChange?: (user: OtherUser | null) => void
@@ -37,6 +40,7 @@ export const RealtimeChat = ({
   userId,
   username,
   schoolId,
+  chatType = '1on1',
   onMessage,
   onOnlineUsersChange,
   onOtherUserChange,
@@ -46,25 +50,42 @@ export const RealtimeChat = ({
 }: RealtimeChatProps) => {
   const { containerRef, scrollToBottom } = useChatScroll()
 
-  const {
-    messages: realtimeMessages,
-    sendMessage,
-    sendLeaveNotification,
-    isConnected,
-    onlineUsers,
-    otherUser,
-  } = useRealtimeChat({
-    roomName,
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
+  const [newMessage, setNewMessage] = useState('')
+
+  // For solo chat, use local state instead of realtime
+  const isSoloChat = chatType === 'solo'
+  
+  const realtimeData = useRealtimeChat({
+    roomName: isSoloChat ? '' : roomName, // Don't connect for solo chat
     userId,
     username,
     schoolId,
     onRoomFull,
   })
-  const [newMessage, setNewMessage] = useState('')
 
-  // Merge realtime messages with initial messages (if any)
+  const {
+    messages: realtimeMessages,
+    sendMessage: realtimeSendMessage,
+    sendLeaveNotification,
+    isConnected: realtimeConnected,
+    onlineUsers,
+    otherUser,
+  } = isSoloChat ? {
+    messages: [],
+    sendMessage: () => {},
+    sendLeaveNotification: async () => {},
+    isConnected: true, // Always "connected" for solo chat
+    onlineUsers: new Set<string>(),
+    otherUser: null,
+  } : realtimeData
+
+  const isConnected = isSoloChat ? true : realtimeConnected
+
+  // Merge messages based on chat type
   const allMessages = useMemo(() => {
-    const mergedMessages = initialMessages ? [...initialMessages, ...realtimeMessages] : realtimeMessages
+    let messagesToUse = isSoloChat ? localMessages : realtimeMessages
+    const mergedMessages = initialMessages ? [...initialMessages, ...messagesToUse] : messagesToUse
     // Remove duplicates based on message id
     const uniqueMessages = mergedMessages.filter(
       (msg, index, self) => index === self.findIndex((m) => m.id === msg.id)
@@ -73,7 +94,23 @@ export const RealtimeChat = ({
     const sortedMessages = uniqueMessages.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
     return sortedMessages
-  }, [initialMessages, realtimeMessages])
+  }, [initialMessages, realtimeMessages, localMessages, isSoloChat])
+
+  // Solo chat send message function
+  const sendSoloMessage = useCallback((messageText: string) => {
+    const newMsg: ChatMessage = {
+      id: `solo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      content: messageText,
+      user: {
+        name: username,
+        schoolId: schoolId,
+      },
+      createdAt: new Date().toISOString(),
+    }
+    setLocalMessages(prev => [...prev, newMsg])
+  }, [userId, username, schoolId])
+
+  const sendMessage = isSoloChat ? sendSoloMessage : realtimeSendMessage
 
   useEffect(() => {
     if (onMessage) {
@@ -130,7 +167,12 @@ export const RealtimeChat = ({
       <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {allMessages.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground">
-            No messages yet. Start the conversation!
+            {isSoloChat 
+              ? "Your private space is ready. Start writing your thoughts..." 
+              : chatType === 'group'
+              ? "No messages yet. Start the group conversation!"
+              : "No messages yet. Start the conversation!"
+            }
           </div>
         ) : null}
         <div className="space-y-1">
@@ -163,7 +205,13 @@ export const RealtimeChat = ({
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
+          placeholder={
+            isSoloChat 
+              ? "Write your thoughts..." 
+              : chatType === 'group' 
+              ? "Message the group..." 
+              : "Type a message..."
+          }
           disabled={!isConnected}
         />
         {isConnected && newMessage.trim() && (
