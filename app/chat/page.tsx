@@ -11,7 +11,7 @@ import { getRoomByHash } from '@/lib/group-rooms'
 import { type OtherUser } from '@/hooks/use-realtime-chat'
 import Image from 'next/image'
 
-type ChatType = '1on1' | 'group' | 'solo'
+type ChatType = '1on1' | 'group'
 
 export default function ChatPage() {
   const router = useRouter()
@@ -177,9 +177,7 @@ export default function ChatPage() {
           </Button>
           <div className="flex-1">
             <h1 className="font-semibold">
-              {chatType === 'solo' ? (
-                <span>Anonymous Space</span>
-              ) : chatType === 'group' ? (
+              {chatType === 'group' ? (
                 <span>{roomName || 'Group Chat'}</span>
               ) : otherUser ? (
                 <span>Chatting with {otherUser.username}</span>
@@ -188,9 +186,7 @@ export default function ChatPage() {
               )}
             </h1>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {chatType === 'solo' ? (
-                <span>Your private space for thoughts</span>
-              ) : chatType === 'group' ? (
+              {chatType === 'group' ? (
                 <div className="flex items-center gap-2">
                   <Hash className="size-3" />
                   <span>{isPublicRoom ? 'Public' : 'Private'}: {roomHash || 'Unknown'}</span>
@@ -229,16 +225,14 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
-        {chatType !== 'solo' && (
-          <Button
-            variant="outline"
-            onClick={handleNext}
-            className="gap-2"
-          >
-            <SkipForward className="size-4" />
-            {chatType === 'group' ? 'Leave Room' : 'Next'}
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          onClick={handleNext}
+          className="gap-2"
+        >
+          <SkipForward className="size-4" />
+          {chatType === 'group' ? 'Leave Room' : 'Next'}
+        </Button>
       </div>
 
       {/* User Left Notification */}

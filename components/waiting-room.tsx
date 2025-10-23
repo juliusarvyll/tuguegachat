@@ -8,12 +8,12 @@ import { getSchoolById } from '@/lib/schools'
 import { canJoinRoom } from '@/lib/group-rooms'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageSquare, Users, Sparkles, GraduationCap, UserPlus, User } from 'lucide-react'
+import { Loader2, MessageSquare, Users, Sparkles, GraduationCap, UserPlus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
-type ChatType = '1on1' | 'group' | 'solo'
+type ChatType = '1on1' | 'group'
 type ViewMode = 'main' | 'group-rooms'
 
 export default function WaitingRoom() {
@@ -64,14 +64,8 @@ export default function WaitingRoom() {
       
       let roomId: string | null = null
       
-      if (chatType === 'solo') {
-        // For solo chat, create a unique room just for this user
-        roomId = `solo-${userWithId.id}-${Date.now()}`
-        console.log('Created solo room:', roomId)
-      } else {
-        // Regular 1-on-1 chat
-        roomId = await findMatch(userWithId.id)
-      }
+      // Regular 1-on-1 chat
+      roomId = await findMatch(userWithId.id)
       
       console.log('Match result:', roomId)
       
@@ -267,21 +261,6 @@ export default function WaitingRoom() {
                     </div>
                   </Button>
 
-                  <Button 
-                    onClick={() => handleStartChat('solo')} 
-                    className="w-full h-14 text-base justify-start"
-                    variant="outline"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-full">
-                        <User className="size-5 text-primary" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-medium">Solo Anonymous Space</p>
-                        <p className="text-xs text-muted-foreground">Private space for thoughts & notes</p>
-                      </div>
-                    </div>
-                  </Button>
                 </div>
 
                 {searchAttempt > 0 && (
@@ -296,9 +275,7 @@ export default function WaitingRoom() {
                   <div className="relative">
                     <Loader2 className="size-16 text-primary animate-spin" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      {selectedChatType === 'solo' ? (
-                        <User className="size-6 text-primary" />
-                      ) : selectedChatType === 'group' ? (
+                      {selectedChatType === 'group' ? (
                         <UserPlus className="size-6 text-primary" />
                       ) : (
                         <MessageSquare className="size-6 text-primary" />
@@ -307,17 +284,13 @@ export default function WaitingRoom() {
                   </div>
                   <div className="text-center space-y-1">
                     <h3 className="font-semibold text-lg">
-                      {selectedChatType === 'solo' 
-                        ? 'Creating your space...' 
-                        : selectedChatType === 'group'
+                      {selectedChatType === 'group'
                         ? 'Finding group chat...'
                         : 'Finding someone...'
                       }
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedChatType === 'solo' 
-                        ? 'Setting up your private anonymous space'
-                        : selectedChatType === 'group'
+                      {selectedChatType === 'group'
                         ? 'Looking for group conversations to join'
                         : 'Looking for available users'
                       }
